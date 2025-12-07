@@ -23,13 +23,19 @@ import mage.util.DebugUtil;
 import mage.view.*;
 import mage.view.ChatMessage.MessageType;
 import org.apache.log4j.Logger;
+import org.mage.card.arcane.CardPanel;
 import org.mage.card.arcane.ManaSymbols;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
+
 
 /**
  * Client side implementation (process commands from a server)
@@ -43,6 +49,36 @@ public class CallbackClientImpl implements CallbackClient {
     private final MageFrame frame;
     private final Map<ClientCallbackType, Integer> lastMessages;
     private final Map<UUID, GameClientMessage> firstGameData;
+
+    public void log(GamePanel gamePanel){
+                String dir = "gamelogs";
+                File saveDir = new File(dir);
+                //Here comes the existence check
+                if (!saveDir.exists()) {
+                    saveDir.mkdirs();
+                }
+                // get game log
+                try {
+                        if (gamePanel != null) {
+                            SimpleDateFormat sdf = new SimpleDateFormat();
+                            sdf.applyPattern("yyyyMMdd_HHmmss");
+                            String fileName = "log";
+                            PrintWriter out = new PrintWriter(fileName);
+                            String log = gamePanel.getGameLog();
+                            // log = log.replace("<body>", "<body style=\"background-color:black\">");
+                            // log = log.replace("<font color=\"#CCCC33\">", "<br><font color=\"#CCCC33\">"); //The color is TIMESTAMP_COLOR and we can utilize it to add line breaks to new lines
+                            out.print(log);
+                            out.close();
+                        
+                    }
+                } catch (FileNotFoundException ex) {
+                    // JOptionPane.showMessageDialog(CardPanel(), "Error while writing game log to file\n\n" + ex, "Error writing gamelog", JOptionPane.ERROR_MESSAGE)
+                    System.err.println("\"Error while writing game log to file\\n" + //
+                                                "\\n" + //
+                                                "\" + ex, \"Error writing gamelog\"");
+                }
+            }
+
 
     public CallbackClientImpl(MageFrame frame) {
         this.frame = frame;
@@ -136,7 +172,7 @@ public class CallbackClientImpl implements CallbackClient {
                         }
                         break;
                     }
-
+//log
                     case START_TOURNAMENT: {
                         TableClientMessage message = (TableClientMessage) callback.getData();
                         tournamentStarted(callback.getMessageId(), callback.getObjectId(), message.getCurrentTableId(), message.getPlayerId());
@@ -203,7 +239,7 @@ public class CallbackClientImpl implements CallbackClient {
                         }
                         break;
                     }
-
+//log
                     case SERVER_MESSAGE: {
                         if (callback.getData() != null) {
                             ChatMessage message = (ChatMessage) callback.getData();
@@ -241,16 +277,17 @@ public class CallbackClientImpl implements CallbackClient {
                         }
                         break;
                     }
-
+//log mulligan
                     case GAME_INIT: {
                         GamePanel panel = MageFrame.getGame(callback.getObjectId());
                         if (panel != null) {
                             appendJsonEvent("GAME_INIT", callback.getObjectId(), callback.getData());
                             panel.init(callback.getMessageId(), (GameView) callback.getData(), true);
                         }
+                        log(panel);
                         break;
                     }
-
+//log
                     case GAME_OVER: {
                         GameClientMessage message = (GameClientMessage) callback.getData();
                         GamePanel panel = MageFrame.getGame(callback.getObjectId());
@@ -370,13 +407,14 @@ public class CallbackClientImpl implements CallbackClient {
                         }
                         break;
                     }
-
+//log
                     case GAME_UPDATE: {
                         GamePanel panel = MageFrame.getGame(callback.getObjectId());
                         if (panel != null) {
                             appendJsonEvent("GAME_UPDATE", callback.getObjectId(), callback.getData());
                             panel.updateGame(callback.getMessageId(), (GameView) callback.getData(), true, null, null); // update after undo wtf?! // TODO: clean dialogs?!
                         }
+                        log(panel);
                         break;
                     }
 
@@ -390,6 +428,8 @@ public class CallbackClientImpl implements CallbackClient {
                         break;
                     }
 
+                    // gameend log
+
                     case END_GAME_INFO: {
                         MageFrame.getInstance().showGameEndDialog((GameEndView) callback.getData());
                         break;
@@ -402,7 +442,7 @@ public class CallbackClientImpl implements CallbackClient {
                         }
                         break;
                     }
-
+//log
                     case GAME_UPDATE_AND_INFORM: {
                         GameClientMessage message = (GameClientMessage) callback.getData();
                         GamePanel panel = MageFrame.getGame(callback.getObjectId());
@@ -410,6 +450,7 @@ public class CallbackClientImpl implements CallbackClient {
                             appendJsonEvent("GAME_INFORM", callback.getObjectId(), message);
                             panel.inform(callback.getMessageId(), message.getGameView(), message.getMessage());
                         }
+                        log(panel);
                         break;
                     }
 
